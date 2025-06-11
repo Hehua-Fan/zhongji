@@ -1,212 +1,240 @@
-# 智能生产排程系统
-## 环境要求
+# 智能排班排产系统
 
-- Node.js 18.0 或更高版本
-- npm 9.0 或更高版本
-- Python 3.8+ (用于算法引擎)
+一个基于Python FastAPI后端和Next.js前端的智能排班排产系统，支持按岗位排班和生产排程功能。
 
-### 安装步骤
+## 🚀 系统概述
 
-1. **克隆项目**
-   ```bash
-   git clone <repository-url>
-   cd zhongji
-   ```
+### 主要功能
+- **按岗位排班**: 根据技能矩阵、岗位需求和人员配置进行智能排班
+- **生产排程**: 支持多种排产规则的生产计划调度
+- **效果评价**: 人岗匹配度和工时利用率分析
+- **请假调整**: 智能生成人员调整建议
+- **数据可视化**: 直观的排班结果展示和统计分析
 
-2. **安装依赖**
-   ```bash
-   npm install
-   ```
+### 技术栈
+- **后端**: Python 3.x, FastAPI, Pandas, Pydantic
+- **前端**: Next.js 14, React, TypeScript, Tailwind CSS
+- **数据处理**: Excel文件读取，JSON API交互
 
-3. **启动开发服务器**
-   ```bash
-   npm run dev
-   ```
+## 📦 安装和启动
 
-4. **访问应用**
-   ```
-   本地访问：http://localhost:3000
-   网络访问：http://192.168.1.6:3000
-   ```
+### 前置条件
+- Python 3.8+
+- Node.js 18+
+- Conda 环境管理器
 
-### 生产部署
+### 1. 后端服务启动
 
 ```bash
-# 构建生产版本
-npm run build
+# 进入后端目录
+cd backend
 
-# 启动生产服务器
-npm start
+# 激活conda环境
+conda activate zhongji
+
+# 安装依赖（如果尚未安装）
+pip install -r requirements.txt
+
+# 启动后端服务
+python start.py
 ```
 
-## 📖 使用指南
+后端服务将运行在: http://localhost:8000
+- API文档: http://localhost:8000/docs
+- 健康检查: http://localhost:8000/health
 
-### 排程功能使用
+### 2. 前端服务启动
 
-1. **数据准备**
-   - 上传产能数据表（Excel格式）或使用默认数据
-   - 设置起始和终止日期
-   - 输入订单总产能需求
+```bash
+# 进入前端目录
+cd frontend
 
-2. **CT/TT时间设置**
-   - 输入CT时间（单人完成时间）
-   - 输入TT时间（订单要求完成时间）
-   - 选择优先策略（成本优先/时间优先）
+# 安装依赖（如果尚未安装）
+npm install
 
-3. **结果分析**
-   - 查看时间紧迫度分析
-   - 对比多个排程方案
-   - 导出详细的排程报告
-
-### 排班功能使用
-
-1. **数据上传**
-   - 上传基础箱型库.xlsx
-   - 上传岗位图谱.xlsx
-   - 上传技能矩阵.xlsx
-
-2. **排班执行**
-   - 输入产品SKU代码
-   - 选择单日排班或一周排班
-   - 设置筛选条件
-
-3. **结果管理**
-   - 查看排班结果详情
-   - 使用多维度筛选
-   - 导出排班计划表
-
-## 🔌 API接口
-
-### 排程接口
-
-```typescript
-POST /api/schedule
-Content-Type: multipart/form-data
-
-{
-  file: File,              // 产能数据表
-  startDate: string,       // 开始日期
-  endDate: string,         // 结束日期
-  totalCapacity: number,   // 总产能需求
-  ttTime: number,          // TT时间
-  ctTime: number,          // CT时间
-  priorityMode: string     // 优先模式
-}
+# 启动前端服务
+npm run dev
 ```
 
-### 排班接口
+前端服务将运行在: http://localhost:3000
 
-```typescript
-POST /api/scheduling
-Content-Type: multipart/form-data
+## 🎯 使用指南
 
-{
-  skuFile: File,           // 基础箱型库
-  positionFile: File,      // 岗位图谱
-  skillFile: File,         // 技能矩阵
-  productCode: string,     // 产品SKU
-  scheduleType: string     // 排班类型
-}
+### 1. 数据准备
+
+系统需要以下三个Excel文件：
+
+#### a. 基础箱型库.xlsx
+包含产品和岗位需求信息：
+- 产成品编码 (列A)
+- 岗位编码 (列E) 
+- 需求人数 (列Q)
+
+#### b. 岗位图谱.xlsx
+包含岗位技能要求：
+- 工作中心 (列C)
+- 岗位编码 (列F)
+- 岗位技能等级 (列M)
+
+#### c. 技能矩阵.xlsx
+包含员工技能信息：
+- 姓名, 工号, 班组
+- 各岗位技能等级 (数值型)
+
+### 2. 排班操作流程
+
+#### 单日排班
+1. 上传三个Excel数据文件
+2. 输入产品SKU代码
+3. 点击"今日排班"按钮
+4. 查看排班结果和效果评价
+
+#### 一周排班
+1. 准备好数据文件
+2. 点击"一周排班"按钮
+3. 系统自动生成本周7天的排班计划
+4. 可切换到周视图查看整体安排
+
+### 3. 功能模块说明
+
+#### 数据上传模块
+- 支持.xlsx格式文件上传
+- 实时验证文件格式和数据完整性
+- 显示上传状态和统计信息
+
+#### 排班视图模块
+- 日视图/周视图切换
+- 多维度筛选 (岗位、工作中心、班组、状态)
+- 排班结果表格展示
+- Excel文件导出功能
+
+#### 效果评价模块
+- **人岗匹配度分析**: 计算员工技能与岗位要求的匹配程度
+- **工时利用率分析**: 评估人员配置的效率
+- **培养计划**: 自动生成技能提升建议
+- **优化方案**: 提供改进建议
+
+#### 请假调整模块
+- 请假信息录入
+- 班组负荷分析
+- 智能调整建议生成
+- 效率影响评估
+
+## 🔧 API接口
+
+### 排班相关
+- `POST /scheduling/day` - 单日排班
+- `POST /scheduling/week` - 一周排班
+- `POST /scheduling/performance` - 性能指标计算
+- `POST /scheduling/team-workloads` - 班组负荷计算
+
+### 排产相关
+- `POST /production/schedule` - 生产排程
+- `POST /production/optimize` - 排程优化
+- `POST /production/gantt` - 甘特图数据
+- `POST /production/summary` - 排程摘要
+
+### 通用工具
+- `GET /health` - 健康检查
+- `GET /algorithms/scheduling-rules` - 排班规则
+- `GET /algorithms/production-rules` - 排产规则
+- `POST /data/validate` - 数据验证
+
+## 📊 算法说明
+
+### 排班算法
+1. **技能匹配**: 优先分配技能等级满足要求的员工
+2. **班组均衡**: 保持班组内人员分配相对均衡  
+3. **负荷均衡**: 避免个别岗位过度集中或不足
+
+### 排产算法
+- **FIFO**: 先进先出，按订单接收时间排序
+- **SPT**: 最短时间优先，优先安排加工时间短的订单
+- **EDD**: 最早交期优先，优先安排交期最近的订单
+- **CR**: 关键比率优先，基于剩余时间和加工时间比率
+
+### 评价指标
+
+#### 人岗匹配度
+```
+总体匹配度 = 满足要求总人数 / 总人数 × 100%
+岗位匹配度 = 满足要求人数 / 岗位总人数 × 100%
 ```
 
-## 📁 项目结构
-
+#### 工时利用率
 ```
-zhongji/
-├── app/                    # Next.js App Router
-│   ├── page.tsx           # 排程页面
-│   ├── paiban/            # 排班页面
-│   └── api/               # API路由
-├── components/            # React组件
-│   ├── ui/                # shadcn/ui组件
-│   └── Header.tsx         # 导航组件
-├── lib/                   # 工具函数
-├── public/                # 静态资源
-│   ├── img/               # 图片资源
-│   └── 默认产能数据表.xlsx # 默认数据
-├── styles/                # 样式文件
-└── types/                 # TypeScript类型定义
+总体利用率 = (实际配置工时 / 需求工时) × 100%
+实际配置工时 = 已排人数 × 标准工时
+需求工时 = 需求人数 × 标准工时
 ```
 
-## 🔧 配置选项
+## 🧪 测试功能
 
-### 算法参数配置
+访问 http://localhost:3000/test 可以进行API连通性测试：
+- 健康检查API测试
+- 排班API功能测试
+- 实时查看请求和响应数据
 
-```typescript
-// config/algorithm.ts
-export const AlgorithmConfig = {
-  // CT/TT阈值配置
-  timeUrgencyThresholds: {
-    normal: 1.0,        // 正常阈值
-    moderate: 1.5,      // 轻微紧迫阈值
-  },
-  
-  // 权重配置
-  objectiveWeights: {
-    cost: 0.4,          // 成本权重
-    time: 0.3,          // 时间权重
-    quality: 0.2,       // 质量权重
-    efficiency: 0.1     // 效率权重
-  },
-  
-  // 排班约束
-  schedulingConstraints: {
-    maxDailyHours: 8,     // 每日最大工时
-    minSkillLevel: 2,     // 最低技能等级
-    teamIntegrityWeight: 0.3  // 班组完整性权重
-  }
-}
+## 🔍 故障排除
+
+### 常见问题
+
+1. **后端服务启动失败**
+   - 检查Python环境和依赖包
+   - 确认端口8000未被占用
+   - 查看控制台错误信息
+
+2. **前端页面无法访问**
+   - 检查Node.js版本 (>=18)
+   - 重新安装依赖: `npm install`
+   - 检查端口3000是否可用
+
+3. **API调用失败**
+   - 确认CORS配置正确
+   - 检查网络连接
+   - 验证请求数据格式
+
+4. **文件上传问题**
+   - 确保Excel文件格式为.xlsx
+   - 检查文件数据结构是否正确
+   - 查看浏览器控制台错误信息
+
+## 📈 系统监控
+
+### 服务状态检查
+```bash
+# 后端健康检查
+curl http://localhost:8000/health
+
+# 前端页面检查  
+curl -I http://localhost:3000
+
+# 排班页面检查
+curl -I http://localhost:3000/paiban
 ```
 
-## 📊 性能指标
+### 性能监控
+- 系统会自动计算并显示排班效率指标
+- 支持导出排班结果进行离线分析
+- 提供详细的错误日志和调试信息
 
-- **排程计算速度**：< 30秒 (1000+数据点)
-- **排班处理能力**：500+员工 × 100+岗位
-- **文件上传限制**：最大50MB Excel文件
-- **并发用户支持**：100+并发用户
-- **响应时间**：平均 < 2秒
+## 🤝 开发者信息
 
-## 🤝 贡献指南
+- **系统架构**: 前后端分离，RESTful API设计
+- **数据流**: Excel → 后端处理 → API响应 → 前端展示
+- **扩展性**: 模块化设计，支持新增算法和功能
 
-我们欢迎所有形式的贡献！请遵循以下步骤：
+## 📞 支持联系
 
-1. Fork 项目
-2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 创建 Pull Request
-
-### 开发规范
-
-- 使用 TypeScript 进行类型安全开发
-- 遵循 ESLint + Prettier 代码规范
-- 编写单元测试覆盖核心算法
-- 更新相关文档
-
-## 📄 许可证
-
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
-
-## 🙏 致谢
-
-- [Next.js](https://nextjs.org/) - React框架
-- [Tailwind CSS](https://tailwindcss.com/) - CSS框架
-- [shadcn/ui](https://ui.shadcn.com/) - UI组件库
-- [SheetJS](https://sheetjs.com/) - Excel文件处理
-- [Lucide](https://lucide.dev/) - 图标库
-
-## 📞 联系方式
-
-- 项目维护者：[您的姓名]
-- 邮箱：[您的邮箱]
-- 项目地址：[GitHub链接]
+如有问题或建议，请通过以下方式联系：
+- 技术支持: 查看系统日志和错误信息
+- 功能建议: 提交功能需求说明
+- 使用培训: 参考本文档和测试页面示例
 
 ---
 
-<div align="center">
-
-**[⬆ 回到顶部](#智能生产排程系统)**
-
-Made with ❤️ by [您的团队名称]
-
-</div>
+✅ **系统已完成部署并正常运行**
+- 后端服务: http://localhost:8000 ✅
+- 前端界面: http://localhost:3000 ✅  
+- 排班功能: http://localhost:3000/paiban ✅
+- API测试: http://localhost:3000/test ✅ 
