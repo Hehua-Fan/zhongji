@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { 
   PieChart,
@@ -14,9 +14,6 @@ import {
   ChevronLeft,
   ChevronRight,
   BarChart3,
-  Target,
-  Clock,
-  Factory
 } from 'lucide-react'
 
 interface CapacityOptimizationPlan {
@@ -184,44 +181,25 @@ export default function ProductionAnalysis({
 
   return (
     <div className="space-y-6">
-      {/* 方案概要 */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 shadow-lg">
-        <CardHeader>
+      {/* 方案概要 - 简化版 */}
+      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+        <CardHeader className="py-4">
           <div className="flex items-center justify-between">
-            <div className="space-y-2">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-blue-600 rounded-lg">
-                  <PieChart className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <CardTitle className="text-2xl text-foreground">{selectedPlan.plan_name}</CardTitle>
-                  <CardDescription className="text-lg text-muted-foreground">
-                    详细分析和生产计划
-                  </CardDescription>
-                </div>
+            <div className="flex items-center space-x-4">
+              <div className="p-2 bg-blue-600 rounded-lg">
+                <PieChart className="h-5 w-5 text-white" />
               </div>
-              
-              {/* 关键指标 */}
-              <div className="flex items-center space-x-6 pt-2">
-                <div className="flex items-center space-x-2">
-                  <Target className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm text-muted-foreground">完成率</span>
-                  <Badge variant="outline" className="font-medium">
-                    {formatPercentage(selectedPlan.completion_rate)}
+              <div>
+                <CardTitle className="text-xl text-foreground">{selectedPlan.plan_name}</CardTitle>
+                <div className="flex items-center space-x-4 mt-1">
+                  <Badge variant="outline" className="text-xs">
+                    完成率 {formatPercentage(selectedPlan.completion_rate)}
                   </Badge>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Factory className="h-4 w-4 text-purple-600" />
-                  <span className="text-sm text-muted-foreground">产能利用率</span>
-                  <Badge variant="outline" className="font-medium">
-                    {formatPercentage(selectedPlan.capacity_utilization)}
+                  <Badge variant="outline" className="text-xs">
+                    产能利用率 {formatPercentage(selectedPlan.capacity_utilization)}
                   </Badge>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Clock className="h-4 w-4 text-orange-600" />
-                  <span className="text-sm text-muted-foreground">平均延误</span>
-                  <Badge variant="outline" className="font-medium">
-                    {selectedPlan.average_delay.toFixed(1)}天
+                  <Badge variant="outline" className="text-xs">
+                    平均延误 {selectedPlan.average_delay.toFixed(1)}天
                   </Badge>
                 </div>
               </div>
@@ -230,18 +208,17 @@ export default function ProductionAnalysis({
             <Button
               onClick={() => integrateToScheduling(selectedPlan)}
               disabled={isIntegratingToScheduling}
-              size="lg"
-              className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-semibold shadow-lg"
+              className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-semibold shadow-lg cursor-pointer"
             >
               {isIntegratingToScheduling ? (
                 <>
-                  <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                   转入中...
                 </>
               ) : (
                 <>
-                  <Play className="h-5 w-5 mr-2" />
-                  开始排班
+                  <Play className="h-4 w-4 mr-2" />
+                  选择方案
                 </>
               )}
             </Button>
@@ -354,7 +331,7 @@ export default function ProductionAnalysis({
           {activeView === 'table' && (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-muted border-b-2">
+                <thead className="bg-muted border-2">
                   <tr>
                     <th className="text-left py-4 px-6 font-semibold text-foreground border-r border-border">日期</th>
                     <th className="text-left py-4 px-6 font-semibold text-foreground border-r border-border">星期</th>
@@ -412,7 +389,7 @@ export default function ProductionAnalysis({
                     </tr>
                   ))}
                 </tbody>
-                <tfoot className="bg-muted border-t-2">
+                <tfoot className="bg-white border-t-2">
                   <tr>
                     <td colSpan={4} className="py-4 px-6 font-bold text-foreground">
                       总计

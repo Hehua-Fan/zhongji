@@ -1,0 +1,61 @@
+# Git 相关
+.git
+.gitignore
+.gitattributes
+
+# 文档
+README.md
+*.md
+assets/
+
+# 前端
+frontend/node_modules
+frontend/.next
+frontend/.env*
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# 后端
+backend/__pycache__
+backend/*.pyc
+backend/*.pyo
+backend/*.pyd
+backend/.Python
+backend/env
+backend/venv
+backend/.venv
+backend/.env*
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 日志
+*.log
+logs
+
+# 缓存
+.cache
+.npm
+.yarn
+
+# 临时文件
+*.tmp
+*.temp
+.temp
+
+# 测试
+coverage
+.nyc_output
+.coverage
+htmlcov
+
+# Conda
+.conda 

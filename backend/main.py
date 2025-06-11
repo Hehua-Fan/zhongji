@@ -460,15 +460,60 @@ async def validate_data(
 
 # ====== 请假和调整相关API ======
 
+@app.post("/leave/submit")
+async def submit_leave_request(request_data: dict):
+    """提交请假申请并生成调整建议"""
+    try:
+        # 提取请求数据
+        leave_info = LeaveInfo(**request_data.get("leave_info", {}))
+        groups = [PositionGroup(**group) for group in request_data.get("groups", [])]
+        skill_data = request_data.get("skill_data", [])
+        current_date = request_data.get("current_date", "")
+        
+        # 处理技能矩阵数据
+        skill_matrix = scheduling_engine.process_skill_matrix(skill_data)
+        
+        # 计算班组负荷（将单个请假信息包装成列表）
+        leaves = [leave_info]
+        workloads = scheduling_engine.calculate_team_workloads(
+            groups=groups,
+            leaves=leaves,
+            skill_matrix=skill_matrix,
+            current_date=current_date
+        )
+        
+        # 生成调整建议
+        suggestions = scheduling_engine.generate_adjustment_suggestions(
+            groups=groups,
+            leaves=leaves,
+            workloads=workloads,
+            skill_matrix=skill_matrix,
+            current_date=current_date
+        )
+        
+        return {
+            "status": "success",
+            "message": f"已处理{leave_info.姓名}的请假申请",
+            "leave_info": leave_info.dict(),
+            "team_workloads": workloads,
+            "adjustment_suggestions": suggestions,
+            "analysis_date": current_date
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"请假申请处理失败: {str(e)}")
+
 @app.post("/adjustment/suggestions")
 async def generate_adjustment_suggestions(
-    groups: List[PositionGroup],
-    leaves: List[LeaveInfo],
-    skill_data: List[List[Any]],
-    current_date: str
+    request_data: dict
 ):
     """生成调整建议"""
     try:
+        # 提取请求数据
+        groups = [PositionGroup(**group) for group in request_data.get("groups", [])]
+        leaves = [LeaveInfo(**leave) for leave in request_data.get("leaves", [])]
+        skill_data = request_data.get("skill_data", [])
+        current_date = request_data.get("current_date", "")
+        
         # 处理技能矩阵数据
         skill_matrix = scheduling_engine.process_skill_matrix(skill_data)
         

@@ -415,8 +415,23 @@ class SchedulingEngine:
         skill_matrix: List[SkillMatrixData],
         current_date: str
     ) -> List[TeamWorkload]:
-        """计算班组负荷情况"""
+        """计算班组负荷情况 - 重新设计，区分在岗和空闲人员"""
         team_map = {}
+        
+        # 先收集所有在岗人员（已分配到具体岗位的人员）
+        on_duty_workers = set()
+        leave_workers = set()
+        
+        # 收集请假人员
+        for leave in leaves:
+            if leave.请假日期 == current_date:
+                leave_workers.add(leave.工号)
+        
+        # 收集在岗人员（分配到岗位且未请假的人员）
+        for group in groups:
+            for worker in group.员工列表:
+                if worker.工号 not in leave_workers:
+                    on_duty_workers.add(worker.工号)
         
         # 初始化班组数据
         for group in groups:
@@ -436,13 +451,7 @@ class SchedulingEngine:
                 team = team_map[team_name]
                 team["总人数"] += 1
                 
-                # 检查是否请假
-                is_on_leave = any(
-                    leave.工号 == worker.工号 and leave.请假日期 == current_date
-                    for leave in leaves
-                )
-                
-                if is_on_leave:
+                if worker.工号 in leave_workers:
                     team["请假人数"] += 1
                 else:
                     team["在岗人数"] += 1
@@ -451,42 +460,64 @@ class SchedulingEngine:
                 skill_level = f"{worker.技能等级}级"
                 team["技能分布"][skill_level] = team["技能分布"].get(skill_level, 0) + 1
         
-        # 计算可调配人员和负荷率
-        for team_name, team in team_map.items():
-            team["负荷率"] = (team["在岗人数"] / team["总人数"] * 100) if team["总人数"] > 0 else 0
+        # 查找空闲人员（有技能但未分配到任何岗位的人员）
+        for skill_data in skill_matrix:
+            worker_id = skill_data.工号
             
-            # 找出可调配的人员
-            for group in groups:
-                for worker in group.员工列表:
-                    if worker.班组 == team_name and worker.技能等级 >= 3:
-                        is_on_leave = any(
-                            leave.工号 == worker.工号 and leave.请假日期 == current_date
-                            for leave in leaves
-                        )
-                        
-                        if not is_on_leave:
-                            # 获取该员工的技能分布
-                            worker_skills = next(
-                                (sm for sm in skill_matrix if sm.工号 == worker.工号), 
-                                None
-                            )
-                            
-                            if worker_skills:
-                                support_positions = []
-                                skill_distribution = {}
-                                
-                                for skill_name, skill_level in worker_skills.skills.items():
-                                    if isinstance(skill_level, int) and skill_level >= 2:
-                                        support_positions.append(skill_name)
-                                        skill_distribution[skill_name] = skill_level
-                                
-                                if len(support_positions) > 1:  # 能支援多个岗位
-                                    team["可调配人员"].append({
-                                        "工号": worker.工号,
-                                        "姓名": worker.姓名,
-                                        "可支援岗位": support_positions,
-                                        "技能等级分布": skill_distribution
-                                    })
+            # 如果该员工未请假且未分配到任何岗位，则为空闲人员
+            if worker_id not in leave_workers and worker_id not in on_duty_workers:
+                # 根据技能矩阵推断所属班组（简化处理）
+                team_name = "备用班组"  # 默认班组，实际应用中可以更精确
+                
+                # 尝试从已有班组中推断
+                for team in team_map.keys():
+                    if team != "备用班组":
+                        team_name = team
+                        break
+                
+                if team_name not in team_map:
+                    team_map[team_name] = {
+                        "班组": team_name,
+                        "总人数": 0,
+                        "在岗人数": 0,
+                        "请假人数": 0,
+                        "技能分布": {},
+                        "负荷率": 0.0,
+                        "可调配人员": []
+                    }
+                
+                # 分析该员工的技能
+                support_positions = []
+                skill_distribution = {}
+                
+                if hasattr(skill_data, 'skills') and skill_data.skills:
+                    for skill_name, skill_level in skill_data.skills.items():
+                        if isinstance(skill_level, int) and skill_level >= 2:
+                            support_positions.append(skill_name)
+                            skill_distribution[skill_name] = skill_level
+                elif hasattr(skill_data, '技能等级分布') and skill_data.技能等级分布:
+                    for skill_name, skill_level in skill_data.技能等级分布.items():
+                        if isinstance(skill_level, int) and skill_level >= 2:
+                            support_positions.append(skill_name)
+                            skill_distribution[skill_name] = skill_level
+                
+                # 只有多技能人员才被认为是可调配的
+                if len(support_positions) >= 1:
+                    team_map[team_name]["可调配人员"].append({
+                        "工号": worker_id,
+                        "姓名": getattr(skill_data, '姓名', f'员工{worker_id}'),
+                        "可支援岗位": support_positions,
+                        "技能等级分布": skill_distribution,
+                        "状态": "空闲"
+                    })
+        
+        # 计算负荷率
+        for team_name, team in team_map.items():
+            if team["总人数"] > 0:
+                # 负荷率 = 在岗人数 / 总人数
+                team["负荷率"] = (team["在岗人数"] / team["总人数"]) * 100
+            else:
+                team["负荷率"] = 0.0
         
         return [TeamWorkload(**team) for team in team_map.values()]
     
@@ -541,56 +572,128 @@ class SchedulingEngine:
         skill_matrix: List[SkillMatrixData],
         current_date: str
     ) -> List[AdjustmentSuggestion]:
-        """生成调整建议"""
+        """生成调整建议 - 基于岗位技能需求和空闲人员匹配"""
         suggestions = []
         
-        # 分析受请假影响的岗位
+        # 分析受请假影响的岗位及其缺口
         affected_positions = {}
         
         for leave in leaves:
             if leave.请假日期 == current_date:
-                for position in leave.影响岗位:
-                    group = next((g for g in groups if g.岗位编码 == position), None)
+                for position_code in leave.影响岗位:
+                    group = next((g for g in groups if g.岗位编码 == position_code), None)
                     if group:
-                        if position not in affected_positions:
-                            affected_positions[position] = {
-                                "group": group, 
-                                "leave_workers": []
+                        if position_code not in affected_positions:
+                            affected_positions[position_code] = {
+                                "group": group,
+                                "leave_workers": [],
+                                "required_skill_level": int(group.技能等级.replace("级", "")) if group.技能等级 else 3
                             }
-                        affected_positions[position]["leave_workers"].append(leave.工号)
+                        affected_positions[position_code]["leave_workers"].append(leave.工号)
         
-        # 为每个受影响的岗位生成调整建议
-        for position, data in affected_positions.items():
+        # 为每个受影响的岗位寻找替代人员
+        for position_code, data in affected_positions.items():
             group = data["group"]
             leave_workers = data["leave_workers"]
+            required_skill = data["required_skill_level"]
             leave_count = len(leave_workers)
             remaining_workers = group.已排人数 - leave_count
             shortage = max(0, group.需求人数 - remaining_workers)
             
             if shortage > 0:
-                # 策略1: 班组内调整
-                internal_suggestion = self._generate_internal_team_adjustment(
-                    group, workloads, shortage, skill_matrix
-                )
-                if internal_suggestion:
-                    suggestions.append(internal_suggestion)
+                # 从所有班组的空闲人员中寻找合适的替代者
+                suitable_candidates = []
                 
-                # 策略2: 跨班组调整
-                cross_suggestion = self._generate_cross_team_adjustment(
-                    group, workloads, shortage, skill_matrix
-                )
-                if cross_suggestion:
-                    suggestions.append(cross_suggestion)
+                for workload in workloads:
+                    for available_worker in workload.可调配人员:
+                        # 检查是否具备该岗位的技能
+                        worker_skill_level = available_worker["技能等级分布"].get(position_code, 0)
+                        
+                        if worker_skill_level >= required_skill - 1:  # 允许技能等级稍低
+                            suitable_candidates.append({
+                                "worker": available_worker,
+                                "source_team": workload.班组,
+                                "skill_level": worker_skill_level,
+                                "skill_match": worker_skill_level >= required_skill
+                            })
                 
-                # 策略3: 加班补偿
-                overtime_suggestion = self._generate_overtime_suggestion(
-                    group, shortage, leaves, current_date
-                )
-                if overtime_suggestion:
-                    suggestions.append(overtime_suggestion)
+                if suitable_candidates:
+                    # 按技能等级排序，优先选择技能高的
+                    suitable_candidates.sort(key=lambda x: x["skill_level"], reverse=True)
+                    
+                    # 选择最合适的人员（不超过缺口数量）
+                    selected_candidates = suitable_candidates[:shortage]
+                    
+                    # 按来源班组分组生成建议
+                    by_team = {}
+                    for candidate in selected_candidates:
+                        team = candidate["source_team"]
+                        if team not in by_team:
+                            by_team[team] = []
+                        by_team[team].append(candidate)
+                    
+                    for source_team, team_candidates in by_team.items():
+                        suggestion_type = "班组内调整" if source_team == group.班组 else "跨班组调整"
+                        priority = 8 if source_team == group.班组 else 6
+                        
+                        # 计算效率影响
+                        avg_skill = sum(c["skill_level"] for c in team_candidates) / len(team_candidates)
+                        skill_gap = max(0, required_skill - avg_skill)
+                        efficiency_loss = skill_gap * 10  # 技能差距转换为效率损失
+                        
+                        suggestion = AdjustmentSuggestion(
+                            调整类型=suggestion_type,
+                            原岗位=position_code,
+                            调整人员=[{
+                                "工号": c["worker"]["工号"],
+                                "姓名": c["worker"]["姓名"],
+                                "当前班组": source_team,
+                                "目标班组": group.班组,
+                                "技能等级": c["skill_level"],
+                                "调整原因": f"补充{position_code}岗位人员缺口",
+                                "技能匹配度": "完全匹配" if c["skill_match"] else "基本匹配"
+                            } for c in team_candidates],
+                            效率影响={
+                                "原岗位效率损失": efficiency_loss,
+                                "目标岗位效率变化": 5 if avg_skill >= required_skill else -5,
+                                "整体效率影响": efficiency_loss - (5 if avg_skill >= required_skill else -5)
+                            },
+                            制造周期影响={
+                                "预计延误时间": max(0, (shortage - len(team_candidates)) * 1.5),
+                                "关键路径影响": group.需求人数 >= 3,
+                                "影响产品": [group.岗位编码]
+                            },
+                            实施建议=self._generate_implementation_advice(
+                                position_code, team_candidates, source_team, group.班组
+                            ),
+                            优先级=priority
+                        )
+                        suggestions.append(suggestion)
+                else:
+                    # 没有合适的替代人员，生成加班建议
+                    overtime_suggestion = self._generate_overtime_suggestion(
+                        group, shortage, leaves, current_date
+                    )
+                    if overtime_suggestion:
+                        suggestions.append(overtime_suggestion)
         
         # 按优先级排序
         return sorted(suggestions, key=lambda x: x.优先级, reverse=True)
+    
+    def _generate_implementation_advice(
+        self, position_code: str, candidates: List[Dict], 
+        source_team: str, target_team: str
+    ) -> str:
+        """生成实施建议"""
+        candidate_count = len(candidates)
+        
+        if source_team == target_team:
+            return f"建议从{source_team}内部调配{candidate_count}名人员到{position_code}岗位，" \
+                   f"平均技能等级{sum(c['skill_level'] for c in candidates) / candidate_count:.1f}级"
+        else:
+            avg_skill = sum(c['skill_level'] for c in candidates) / candidate_count
+            return f"建议从{source_team}调配{candidate_count}名人员支援{target_team}的{position_code}岗位，" \
+                   f"需要协调跨班组工作安排，建议给予适当补贴。平均技能等级{avg_skill:.1f}级。"
     
     def _generate_internal_team_adjustment(
         self, group: PositionGroup, workloads: List[TeamWorkload], 

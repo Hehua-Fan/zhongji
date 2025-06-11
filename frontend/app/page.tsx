@@ -1,43 +1,20 @@
 'use client'
 
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo} from 'react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
-  Plus, 
-  Trash2, 
   Calculator, 
   TrendingUp, 
-  TrendingDown,
-  Clock,
   Users,
-  CheckCircle2,
   AlertCircle,
   Factory,
   Calendar,
-  Target,
-  DollarSign,
-  Zap,
   BarChart3,
   PieChart,
-  Download,
-  RefreshCw,
-  Award,
-  ArrowRight,
-  Table,
-  Play,
   Settings,
   ShoppingCart,
   FileText,
-  TrendingDown as TrendingDownIcon,
-  Package,
-  Eye,
-  Info,
   X,
   Upload,
   ChevronDown,
@@ -45,6 +22,7 @@ import {
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import toast from 'react-hot-toast'
+import { LucideIcon } from 'lucide-react'
 
 // 导入排产组件
 import OrderManagement from '@/components/paichan/OrderManagement'
@@ -58,6 +36,107 @@ import ScheduleResults from '@/components/paiban/ScheduleResults'
 import SchedulingPerformanceAnalysis from '@/components/paiban/PerformanceAnalysis'
 import LeaveAdjustment from '@/components/paiban/LeaveAdjustment'
 
+// 定义生产计划项接口
+interface ProductionItem {
+  order_id: string
+  customer_name: string
+  product_code: string
+  quantity: number
+  capacity_used: number
+  delay_days: number
+  cost: number
+  completion_date: string
+}
+
+// 定义性能指标接口
+interface PlanMetrics {
+  total_cost: number
+  completion_rate: number
+  average_delay: number
+  capacity_utilization: number
+  energy_cost: number
+  labor_cost: number
+  efficiency_score: number
+}
+
+// 定义对比指标接口
+interface ComparisonMetrics {
+  cost_comparison: {
+    baseline_cost: number
+    optimized_cost: number
+    cost_saving: number
+    saving_percentage: number
+  }
+  efficiency_comparison: {
+    baseline_completion_rate: number
+    optimized_completion_rate: number
+    improvement: number
+  }
+  delay_comparison: {
+    baseline_delay: number
+    optimized_delay: number
+    reduction: number
+  }
+}
+
+// 定义人岗匹配度接口
+interface PersonJobMatch {
+  total_match_rate: number
+  position_match_details: {
+    position_code: string
+    position_name: string
+    required_count: number
+    assigned_count: number
+    match_rate: number
+    skill_requirements: number[]
+    assigned_skills: number[]
+  }[]
+}
+
+// 定义工时利用率接口
+interface WorkHourUtilization {
+  overall_utilization: number
+  department_utilization: {
+    work_center: string
+    team: string
+    utilization_rate: number
+    total_hours: number
+    effective_hours: number
+  }[]
+}
+
+// 定义请假信息接口
+interface LeaveInfo {
+  工号: string
+  姓名: string
+  请假日期: string
+  请假类型: string
+  请假时长: number
+  影响岗位: string[]
+  紧急程度: string
+}
+
+// 定义调整建议接口
+interface AdjustmentSuggestion {
+  调整类型: string
+  原岗位: string
+  调整人员: unknown[]
+  效率影响: unknown
+  制造周期影响: unknown
+  实施建议: string
+  优先级: number
+}
+
+// 定义团队工作量接口
+interface TeamWorkload {
+  班组: string
+  总人数: number
+  在岗人数: number
+  请假人数: number
+  技能分布: { [key: string]: number }
+  负荷率: number
+  可调配人员: unknown[]
+}
 
 // 排产相关接口
 interface CustomerOrder {
@@ -79,19 +158,19 @@ interface CapacityOptimizationPlan {
   plan_id: string
   plan_name: string
   plan_type: string
-  weekly_schedule: Record<string, any[]>
+  weekly_schedule: Record<string, ProductionItem[]>
   total_cost: number
   completion_rate: number
   average_delay: number
   capacity_utilization: number
-  metrics: any
+  metrics: PlanMetrics
 }
 
 interface MultiPlanProductionResponse {
   baseline_plan: CapacityOptimizationPlan
   optimized_plans: CapacityOptimizationPlan[]
   recommended_plan: CapacityOptimizationPlan
-  comparison_metrics: any
+  comparison_metrics: ComparisonMetrics
 }
 
 interface CapacityConfigData {
@@ -153,8 +232,8 @@ interface WeeklySchedule {
 }
 
 interface PerformanceMetrics {
-  人岗匹配度: any
-  工时利用率: any
+  人岗匹配度: PersonJobMatch
+  工时利用率: WorkHourUtilization
 }
 
 type ViewMode = 'day' | 'week'
@@ -163,14 +242,14 @@ type ViewMode = 'day' | 'week'
 interface NavItem {
   id: string
   label: string
-  icon: any
+  icon: LucideIcon
   description?: string
 }
 
 interface NavGroup {
   id: string
   label: string
-  icon: any
+  icon: LucideIcon
   items: NavItem[]
   collapsed?: boolean
 }
@@ -204,7 +283,7 @@ export default function IntegratedPage() {
   // 通用状态
   const [activeTab, setActiveTab] = useState('prod-orders')
   const [navigationState, setNavigationState] = useState<{[key: string]: boolean}>({
-    production: false,
+    production: true,
     scheduling: true
   })
 
@@ -265,16 +344,27 @@ export default function IntegratedPage() {
   })
 
   // 请假调整相关状态
-  const [leaveList, setLeaveList] = useState<any[]>([])
-  const [adjustmentSuggestions, setAdjustmentSuggestions] = useState<any[]>([])
-  const [teamWorkloads, setTeamWorkloads] = useState<any[]>([])
+  const [leaveList, setLeaveList] = useState<LeaveInfo[]>([])
+  const [adjustmentSuggestions, setAdjustmentSuggestions] = useState<AdjustmentSuggestion[]>([])
+  const [teamWorkloads, setTeamWorkloads] = useState<TeamWorkload[]>([])
 
   // 产能配置状态（用于排产到排班的数据传递）
   const [productionCapacityConfig, setProductionCapacityConfig] = useState<{
+    planName: string
+    planType: string
     baselineCapacity: number
     capacityVariation: number
     actualCapacity: number
     utilizationRate: number
+    totalCost: number
+    completionRate: number
+    averageDelay: number
+    weeklyScheduleSummary: {
+      totalProduction: number
+      workingDays: number
+      customers: string[]
+      products: string[]
+    }
   } | null>(null)
 
   // 通用加载状态
@@ -315,7 +405,7 @@ export default function IntegratedPage() {
     setOrders(orders.filter(order => order.id !== id))
   }
 
-  const updateOrder = (id: string, field: keyof CustomerOrder, value: any) => {
+  const updateOrder = (id: string, field: keyof CustomerOrder, value: string | number) => {
     setOrders(orders.map(order => 
       order.id === id ? { ...order, [field]: value } : order
     ))
@@ -360,7 +450,7 @@ export default function IntegratedPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          orders: orders.map(({ id, ...order }) => order),
+          orders: orders.map(({ id: _id, ...order }) => order), // eslint-disable-line @typescript-eslint/no-unused-vars
           start_date: new Date().toISOString().split('T')[0],
           baseline_capacity: baselineCapacity,
           capacity_variation: capacityVariation,
@@ -392,18 +482,47 @@ export default function IntegratedPage() {
   const integrateToScheduling = async (plan: CapacityOptimizationPlan) => {
     setIsIntegratingToScheduling(true)
     try {
-      // 设置产能配置数据
+      // 计算生产安排汇总
+      const weeklySchedule = plan.weekly_schedule
+      const allCustomers = new Set<string>()
+      const allProducts = new Set<string>()
+      let totalProduction = 0
+      let workingDays = 0
+      
+      Object.values(weeklySchedule).forEach(daySchedule => {
+        if (daySchedule.length > 0) {
+          workingDays++
+          daySchedule.forEach(item => {
+            allCustomers.add(item.customer_name)
+            allProducts.add(item.product_code)
+            totalProduction += item.quantity
+          })
+        }
+      })
+      
+      // 设置完整的产能配置数据
       setProductionCapacityConfig({
+        planName: plan.plan_name,
+        planType: plan.plan_type === 'baseline' ? '基准方案' : '优化方案',
         baselineCapacity: baselineCapacity,
         capacityVariation: capacityVariation,
         actualCapacity: plan.capacity_utilization * baselineCapacity / 100,
-        utilizationRate: plan.capacity_utilization
+        utilizationRate: plan.capacity_utilization,
+        totalCost: plan.total_cost,
+        completionRate: plan.completion_rate,
+        averageDelay: plan.average_delay,
+        weeklyScheduleSummary: {
+          totalProduction,
+          workingDays,
+          customers: Array.from(allCustomers),
+          products: Array.from(allProducts)
+        }
       })
       
       // 切换到数据上传页面
       setActiveTab('sched-upload')
       
-      toast.success('排产数据已导入到排班系统，包含产能配置信息')
+      toast.success('排产方案数据已导入到排班系统！')
     } catch (error) {
       console.error('集成到排班失败:', error)
       toast.error('集成到排班失败')
@@ -469,21 +588,63 @@ export default function IntegratedPage() {
     }
   }
 
-  // 处理请假申请
-  const handleLeaveRequest = async (leaveInfo: any) => {
+  // 添加请假申请（仅添加到本地列表）
+  const handleLeaveRequest = async (leaveInfo: LeaveInfo) => {
     try {
+      // 检查是否有排班数据
+      if (positionGroups.length === 0) {
+        toast.error('请先完成排班后再添加请假申请')
+        return
+      }
+
+      // 检查是否重复添加
+      const isDuplicate = leaveList.some(leave => 
+        leave.工号 === leaveInfo.工号 && leave.请假日期 === leaveInfo.请假日期
+      )
+
+      if (isDuplicate) {
+        toast.error('该员工在此日期已有请假记录')
+        return
+      }
+
       setLeaveList(prev => [...prev, leaveInfo])
+      toast.success(`已添加${leaveInfo.姓名}的请假申请`)
+    } catch (error) {
+      console.error('添加请假申请失败:', error)
+      toast.error('添加请假申请失败')
+    }
+  }
+
+  // 生成调整建议
+  const generateAdjustmentSolutions = async () => {
+    try {
+      // 检查必要的文件是否已上传
+      if (!skuFile || !positionFile || !skillFile) {
+        toast.error('请先上传所有必需的文件（SKU、岗位、技能矩阵）')
+        return
+      }
+
+      // 检查是否有请假数据
+      if (leaveList.length === 0) {
+        toast.error('请先添加请假申请')
+        return
+      }
+
+      // 检查是否有排班数据
+      if (positionGroups.length === 0) {
+        toast.error('请先完成排班后再生成调整方案')
+        return
+      }
+
+      setIsProcessing(true)
       
-      // 调用后端API生成调整建议
-      const [skuRawData, positionRawData, skillRawData] = await Promise.all([
-        readExcelFile(skuFile!),
-        readExcelFile(positionFile!),
-        readExcelFile(skillFile!)
-      ])
+      // 读取技能矩阵文件
+      const skillRawData = await readExcelFile(skillFile)
       
+      // 调用后端API处理所有请假申请
       const data = await callAPI('/adjustment/suggestions', 'POST', {
         groups: positionGroups,
-        leaves: [...leaveList, leaveInfo],
+        leaves: leaveList,
         skill_data: skillRawData,
         current_date: formatDate(currentDate)
       })
@@ -491,14 +652,16 @@ export default function IntegratedPage() {
       setTeamWorkloads(data.team_workloads)
       setAdjustmentSuggestions(data.adjustment_suggestions)
       
-      toast.success(`已处理${leaveInfo.姓名}的请假申请，生成了${data.adjustment_suggestions.length}条调整建议`)
+      toast.success(`已分析${leaveList.length}个请假申请，生成了${data.adjustment_suggestions.length}条调整建议`)
     } catch (error) {
-      console.error('处理请假申请失败:', error)
-      toast.error('请假申请处理失败')
+      console.error('生成调整建议失败:', error)
+      toast.error(error instanceof Error ? error.message : '生成调整建议失败')
+    } finally {
+      setIsProcessing(false)
     }
   }
 
-  const readExcelFile = async (file: File): Promise<any[]> => {
+  const readExcelFile = async (file: File): Promise<unknown[]> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
       reader.onload = (e) => {
@@ -519,7 +682,7 @@ export default function IntegratedPage() {
   }
 
   // API调用函数
-  const callAPI = async (url: string, method: string = 'GET', data?: any) => {
+  const callAPI = async (url: string, method: string = 'GET', data?: unknown) => {
     const config: RequestInit = {
       method,
       headers: {
@@ -709,7 +872,7 @@ export default function IntegratedPage() {
       products: string[];
       totalQuantity: number;
       totalCapacityUsed: number;
-      details: any[];
+      details: ProductionItem[];
     }> = []
     const dates = Object.keys(plan.weekly_schedule).sort()
     
@@ -718,7 +881,7 @@ export default function IntegratedPage() {
     const products = new Set<string>()
     
     dates.forEach(date => {
-      plan.weekly_schedule[date]?.forEach((result: any) => {
+      plan.weekly_schedule[date]?.forEach((result: ProductionItem) => {
         customers.add(result.customer_name)
         products.add(result.product_code)
       })
@@ -727,14 +890,14 @@ export default function IntegratedPage() {
     // 构建表格数据
     dates.forEach(date => {
       const dayResults = plan.weekly_schedule[date] || []
-      const totalQuantity = dayResults.reduce((sum: number, result: any) => sum + result.quantity, 0)
-      const totalCapacityUsed = dayResults.reduce((sum: number, result: any) => sum + result.capacity_used, 0)
+      const totalQuantity = dayResults.reduce((sum: number, result: ProductionItem) => sum + result.quantity, 0)
+      const totalCapacityUsed = dayResults.reduce((sum: number, result: ProductionItem) => sum + result.capacity_used, 0)
       
       tableData.push({
         date,
         weekday: new Date(date).toLocaleDateString('zh-CN', { weekday: 'long' }),
-        customers: [...new Set(dayResults.map((r: any) => r.customer_name))],
-        products: [...new Set(dayResults.map((r: any) => r.product_code))],
+        customers: [...new Set(dayResults.map((r: ProductionItem) => r.customer_name))],
+        products: [...new Set(dayResults.map((r: ProductionItem) => r.product_code))],
         totalQuantity,
         totalCapacityUsed,
         details: dayResults
@@ -975,6 +1138,8 @@ export default function IntegratedPage() {
             adjustmentSuggestions={adjustmentSuggestions}
             teamWorkloads={teamWorkloads}
             handleLeaveRequest={handleLeaveRequest}
+            generateAdjustmentSolutions={generateAdjustmentSolutions}
+            isProcessing={isProcessing}
             formatDate={formatDate}
             setActiveTab={setActiveTab}
           />
