@@ -31,7 +31,9 @@ class SchedulingEngine:
                 task = TaskData(
                     产成品编码=str(row[0]) if row[0] else "",
                     岗位编码=str(row[4]) if row[4] else "",
-                    需求人数=int(row[16]) if row[16] and str(row[16]).isdigit() else 0
+                    需求人数=int(row[16]) if row[16] and str(row[16]).isdigit() else 0,
+                    工作中心=str(row[3]) if len(row) > 3 and row[3] else "",  # 工作中心通常在第4列
+                    箱型=str(row[17]) if len(row) > 17 and row[17] else ""  # 新增：箱型在第18列
                 )
                 if task.产成品编码 and task.岗位编码:
                     results.append(task)

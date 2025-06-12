@@ -8,7 +8,7 @@ from models import (
     CustomerOrder, CapacityPlan, ProductionScheduleResult, 
     CapacityOptimizationPlan, MultiPlanProductionRequest,
     MultiPlanProductionResponse, ProductionToSchedulingRequest,
-    ProductionToSchedulingResponse
+    ProductionToSchedulingResponse, WorkCenterScheduleResult, WorkCenterProductionPlan
 )
 from datetime import datetime, timedelta
 import itertools
@@ -39,6 +39,40 @@ class ProductionSchedulingEngine:
             220: {"节拍": 376, "能耗": 880, "定员": 1078, "人效": 4.9},
             240: {"节拍": 345, "能耗": 669, "定员": 1135, "人效": 4.73},
             260: {"节拍": 318, "能耗": 760, "定员": 1230, "人效": 4.73}
+        }
+        
+        # 转产时间配置（基于用户提供的转产时间表格数据）
+        self.changeover_time_config = {
+            "HL": {
+                "前框": 30,
+                "T地板": 30,
+                "顶板发泡": 150,
+                "侧板发泡": 150,
+                "底架发泡": 300,
+                "总装": 30,
+                "涂装": 15,
+                "内装修": 15
+            },
+            "20尺小箱": {
+                "内侧板线": 50,
+                "外侧板线": 50,
+                "底架线": 45,
+                "T地板线": 35,
+                "前框线": 35,
+                "后框线": 35,
+                "顶板发泡": 180,
+                "侧板发泡": 260,
+                "底架发泡": 190,
+                "总装线": 20,
+                "涂装线": 19,
+                "完工线": 25
+            }
+        }
+        
+        # 产品编码到箱型的映射（基于用户提供的基础箱型库数据）
+        self.product_to_box_type = {
+            "C1B010000036": "HL",
+            "C1B010000037": "20尺小箱"
         }
     
     def is_working_day(self, date: datetime) -> bool:
@@ -531,3 +565,146 @@ class ProductionSchedulingEngine:
                 ])
         
         return mock_data
+    
+    def get_changeover_time(self, from_box_type: str, to_box_type: str, work_center: str) -> int:
+        """获取转产时间"""
+        if from_box_type == to_box_type:
+            return 0  # 同箱型不需要转产时间
+        
+        # 获取目标箱型在指定工作中心的转产时间
+        if to_box_type in self.changeover_time_config:
+            return self.changeover_time_config[to_box_type].get(work_center, 0)
+        
+        return 0
+    
+    def get_box_type_for_product(self, product_code: str) -> str:
+        """根据产品编码获取箱型"""
+        return self.product_to_box_type.get(product_code, "未知箱型")
+    
+    def calculate_work_center_schedule(
+        self, 
+        orders: List[CustomerOrder], 
+        capacity_plan: CapacityPlan,
+        sku_data: List[List[Any]] = None
+    ) -> Dict[str, "WorkCenterScheduleResult"]:
+        """按工作中心计算排产计划"""
+        from models import WorkCenterScheduleResult, WorkCenterProductionPlan
+        
+        # 按优先级和交期排序订单
+        sorted_orders = sorted(orders, key=lambda x: (
+            -x.priority,  # 优先级降序
+            x.due_date,   # 交期升序
+            x.order_date  # 订单日期升序
+        ))
+        
+        # 工作中心生产状态跟踪
+        work_center_schedules = {}
+        work_center_last_box_type = {}  # 记录每个工作中心的最后箱型
+        
+        for order in sorted_orders:
+            product_code = order.product_code
+            box_type = self.get_box_type_for_product(product_code)
+            remaining_quantity = order.quantity
+            
+            # 从SKU数据中获取该产品的工作中心信息
+            work_centers = self._get_work_centers_for_product(product_code, sku_data)
+            
+            for work_center in work_centers:
+                if work_center not in work_center_schedules:
+                    work_center_schedules[work_center] = {
+                        "daily_plans": {},
+                        "total_changeover_time": 0,
+                        "efficiency_metrics": {}
+                    }
+                
+                # 计算转产时间
+                last_box_type = work_center_last_box_type.get(work_center, "")
+                changeover_time = self.get_changeover_time(last_box_type, box_type, work_center)
+                
+                # 在可用日期中安排生产
+                for date in sorted(capacity_plan.daily_capacities.keys()):
+                    if remaining_quantity <= 0:
+                        break
+                    
+                    if date not in work_center_schedules[work_center]["daily_plans"]:
+                        work_center_schedules[work_center]["daily_plans"][date] = []
+                    
+                    # 计算当日可用产能（考虑转产时间）
+                    daily_capacity = capacity_plan.daily_capacities[date]
+                    used_capacity = sum(p.quantity for p in work_center_schedules[work_center]["daily_plans"][date])
+                    available_capacity = daily_capacity - used_capacity
+                    
+                    # 如果需要转产，减少可用产能
+                    if changeover_time > 0 and not work_center_schedules[work_center]["daily_plans"][date]:
+                        # 假设每分钟转产时间相当于减少1个单位产能
+                        available_capacity -= changeover_time // 60
+                        work_center_schedules[work_center]["total_changeover_time"] += changeover_time
+                    
+                    if available_capacity <= 0:
+                        continue
+                    
+                    # 安排生产
+                    quantity_to_schedule = min(remaining_quantity, available_capacity)
+                    
+                    production_plan = WorkCenterProductionPlan(
+                        work_center=work_center,
+                        date=date,
+                        box_type=box_type,
+                        start_time="08:00",  # 简化处理
+                        end_time="16:00",    # 简化处理
+                        quantity=quantity_to_schedule,
+                        product_code=product_code,
+                        changeover_time=changeover_time if not work_center_schedules[work_center]["daily_plans"][date] else 0
+                    )
+                    
+                    work_center_schedules[work_center]["daily_plans"][date].append(production_plan)
+                    remaining_quantity -= quantity_to_schedule
+                    work_center_last_box_type[work_center] = box_type
+                    changeover_time = 0  # 后续同日生产不再需要转产时间
+        
+        # 转换为返回格式
+        result = {}
+        for work_center, schedule_data in work_center_schedules.items():
+            result[work_center] = WorkCenterScheduleResult(
+                work_center=work_center,
+                daily_plans=schedule_data["daily_plans"],
+                total_changeover_time=schedule_data["total_changeover_time"],
+                efficiency_metrics=self._calculate_work_center_efficiency(schedule_data)
+            )
+        
+        return result
+    
+    def _get_work_centers_for_product(self, product_code: str, sku_data: List[List[Any]] = None) -> List[str]:
+        """根据产品编码和SKU数据获取相关工作中心"""
+        if not sku_data:
+            # 默认工作中心
+            return ["前框", "T地板", "总装", "涂装"]
+        
+        work_centers = set()
+        for row in sku_data[1:]:  # 跳过标题行
+            if len(row) >= 4 and str(row[0]) == product_code:
+                work_center = str(row[3]) if row[3] else ""
+                if work_center:
+                    work_centers.add(work_center)
+        
+        return list(work_centers) if work_centers else ["默认工作中心"]
+    
+    def _calculate_work_center_efficiency(self, schedule_data: Dict) -> Dict[str, float]:
+        """计算工作中心效率指标"""
+        total_production_time = 0
+        total_changeover_time = schedule_data["total_changeover_time"]
+        
+        for date, plans in schedule_data["daily_plans"].items():
+            for plan in plans:
+                # 简化计算：假设每个单位产品需要1分钟
+                total_production_time += plan.quantity
+        
+        total_time = total_production_time + total_changeover_time
+        production_efficiency = total_production_time / total_time if total_time > 0 else 0
+        
+        return {
+            "生产效率": production_efficiency,
+            "转产时间占比": total_changeover_time / total_time if total_time > 0 else 0,
+            "总生产时间": total_production_time,
+            "总转产时间": total_changeover_time
+        }

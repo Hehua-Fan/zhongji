@@ -3,26 +3,13 @@
 import React, { useState, useMemo} from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Calculator, 
-  TrendingUp, 
-  Users,
-  AlertCircle,
-  Factory,
-  Calendar,
-  BarChart3,
-  PieChart,
-  Settings,
-  ShoppingCart,
-  FileText,
-  X,
-  Upload,
-  ChevronDown,
-  ChevronRight
-} from 'lucide-react'
-import * as XLSX from 'xlsx'
-import toast from 'react-hot-toast'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { toast, Toaster } from 'react-hot-toast'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { X, Eye, Users, Calendar, BarChart3, Plus, ClipboardList, UserCog, Factory, ShoppingCart, Settings, FileText, Upload, TrendingUp, ChevronDown, ChevronRight, Calculator, PieChart, AlertCircle, Clock, Package } from 'lucide-react'
 import { LucideIcon } from 'lucide-react'
+import * as XLSX from 'xlsx'
 
 // 导入排产组件
 import OrderManagement from '@/components/paichan/OrderManagement'
@@ -34,7 +21,7 @@ import ProductionAnalysis from '@/components/paichan/ProductionAnalysis'
 import DataUpload from '@/components/paiban/DataUpload'
 import ScheduleResults from '@/components/paiban/ScheduleResults'
 import SchedulingPerformanceAnalysis from '@/components/paiban/PerformanceAnalysis'
-import LeaveAdjustment from '@/components/paiban/LeaveAdjustment'
+import EmployeeStatusManagement from '@/components/paiban/EmployeeStatusManagement'
 
 // 定义生产计划项接口
 interface ProductionItem {
@@ -193,6 +180,29 @@ interface CapacityConfigResponse {
   }
 }
 
+interface ChangeoverTimeData {
+  [boxType: string]: {
+    [workCenter: string]: number
+  }
+}
+
+interface ChangeoverTimeConfigResponse {
+  changeover_data: ChangeoverTimeData
+  statistics: {
+    total_box_types: number
+    total_work_centers: number
+    total_records: number
+    min_changeover_time: number
+    max_changeover_time: number
+    unit: string
+  }
+  description: {
+    purpose: string
+    includes: string
+    note: string
+  }
+}
+
 // 排班相关接口
 interface SchedulingResult {
   岗位编码: string
@@ -274,7 +284,7 @@ const navigationConfig: NavGroup[] = [
       { id: 'sched-upload', label: '数据上传', icon: Upload, description: '上传SKU、岗位和技能数据' },
       { id: 'sched-schedule', label: '排班结果', icon: Calendar, description: '查看和管理排班安排' },
       { id: 'sched-analysis', label: '性能分析', icon: TrendingUp, description: '分析排班效果和优化建议' },
-      { id: 'sched-leave-adjustment', label: '请假调整', icon: Settings, description: '管理请假调整' }
+      { id: 'sched-employee-status', label: '员工状态管理', icon: UserCog, description: '管理员工状态' }
     ]
   }
 ]
@@ -311,6 +321,9 @@ export default function IntegratedPage() {
   const [showCapacityModal, setShowCapacityModal] = useState(false)
   const [capacityData, setCapacityData] = useState<CapacityConfigResponse | null>(null)
   const [loadingCapacityData, setLoadingCapacityData] = useState(false)
+  const [showChangeoverModal, setShowChangeoverModal] = useState(false)
+  const [changeoverData, setChangeoverData] = useState<ChangeoverTimeConfigResponse | null>(null)
+  const [loadingChangeoverData, setLoadingChangeoverData] = useState(false)
 
   // 排班相关状态
   const [skuFile, setSkuFile] = useState<File | null>(null)
@@ -342,11 +355,6 @@ export default function IntegratedPage() {
     工作中心列表: [] as string[],
     班组列表: [] as string[]
   })
-
-  // 请假调整相关状态
-  const [leaveList, setLeaveList] = useState<LeaveInfo[]>([])
-  const [adjustmentSuggestions, setAdjustmentSuggestions] = useState<AdjustmentSuggestion[]>([])
-  const [teamWorkloads, setTeamWorkloads] = useState<TeamWorkload[]>([])
 
   // 产能配置状态（用于排产到排班的数据传递）
   const [productionCapacityConfig, setProductionCapacityConfig] = useState<{
@@ -434,6 +442,31 @@ export default function IntegratedPage() {
       fetchCapacityData()
     }
     setShowCapacityModal(true)
+  }
+
+  // 获取转产时间配置数据
+  const fetchChangeoverData = async () => {
+    setLoadingChangeoverData(true)
+    try {
+      const response = await fetch('http://localhost:8000/production/changeover-time-config')
+      if (!response.ok) {
+        throw new Error('获取转产时间配置数据失败')
+      }
+      const data = await response.json()
+      setChangeoverData(data)
+    } catch (error) {
+      console.error('获取转产时间配置数据失败:', error)
+      toast.error('获取转产时间配置数据失败')
+    } finally {
+      setLoadingChangeoverData(false)
+    }
+  }
+
+  const openChangeoverModal = () => {
+    if (!changeoverData) {
+      fetchChangeoverData()
+    }
+    setShowChangeoverModal(true)
   }
 
   const executeMultiPlanProduction = async () => {
@@ -586,99 +619,6 @@ export default function IntegratedPage() {
     } catch (error) {
       console.error('获取筛选选项失败:', error)
     }
-  }
-
-  // 添加请假申请（仅添加到本地列表）
-  const handleLeaveRequest = async (leaveInfo: LeaveInfo) => {
-    try {
-      // 检查是否有排班数据
-      if (positionGroups.length === 0) {
-        toast.error('请先完成排班后再添加请假申请')
-        return
-      }
-
-      // 检查是否重复添加
-      const isDuplicate = leaveList.some(leave => 
-        leave.工号 === leaveInfo.工号 && leave.请假日期 === leaveInfo.请假日期
-      )
-
-      if (isDuplicate) {
-        toast.error('该员工在此日期已有请假记录')
-        return
-      }
-
-      setLeaveList(prev => [...prev, leaveInfo])
-      toast.success(`已添加${leaveInfo.姓名}的请假申请`)
-    } catch (error) {
-      console.error('添加请假申请失败:', error)
-      toast.error('添加请假申请失败')
-    }
-  }
-
-  // 生成调整建议
-  const generateAdjustmentSolutions = async () => {
-    try {
-      // 检查必要的文件是否已上传
-      if (!skuFile || !positionFile || !skillFile) {
-        toast.error('请先上传所有必需的文件（SKU、岗位、技能矩阵）')
-        return
-      }
-
-      // 检查是否有请假数据
-      if (leaveList.length === 0) {
-        toast.error('请先添加请假申请')
-        return
-      }
-
-      // 检查是否有排班数据
-      if (positionGroups.length === 0) {
-        toast.error('请先完成排班后再生成调整方案')
-        return
-      }
-
-      setIsProcessing(true)
-      
-      // 读取技能矩阵文件
-      const skillRawData = await readExcelFile(skillFile)
-      
-      // 调用后端API处理所有请假申请
-      const data = await callAPI('/adjustment/suggestions', 'POST', {
-        groups: positionGroups,
-        leaves: leaveList,
-        skill_data: skillRawData,
-        current_date: formatDate(currentDate)
-      })
-      
-      setTeamWorkloads(data.team_workloads)
-      setAdjustmentSuggestions(data.adjustment_suggestions)
-      
-      toast.success(`已分析${leaveList.length}个请假申请，生成了${data.adjustment_suggestions.length}条调整建议`)
-    } catch (error) {
-      console.error('生成调整建议失败:', error)
-      toast.error(error instanceof Error ? error.message : '生成调整建议失败')
-    } finally {
-      setIsProcessing(false)
-    }
-  }
-
-  const readExcelFile = async (file: File): Promise<unknown[]> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        try {
-          const data = new Uint8Array(e.target?.result as ArrayBuffer)
-          const workbook = XLSX.read(data, { type: 'array' })
-          const sheetName = workbook.SheetNames[0]
-          const worksheet = workbook.Sheets[sheetName]
-          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
-          resolve(jsonData)
-        } catch (error) {
-          reject(error)
-        }
-      }
-      reader.onerror = () => reject(new Error('文件读取失败'))
-      reader.readAsArrayBuffer(file)
-    })
   }
 
   // API调用函数
@@ -1001,14 +941,15 @@ export default function IntegratedPage() {
         return (
           <ParameterSettings
             baselineCapacity={baselineCapacity}
-            setBaselineCapacity={setBaselineCapacity}
             capacityVariation={capacityVariation}
-            setCapacityVariation={setCapacityVariation}
             delayPenalty={delayPenalty}
+            setBaselineCapacity={setBaselineCapacity}
+            setCapacityVariation={setCapacityVariation}
             setDelayPenalty={setDelayPenalty}
             executeMultiPlanProduction={executeMultiPlanProduction}
             openCapacityModal={openCapacityModal}
-            isLoading={isLoading}
+            openChangeoverModal={openChangeoverModal}
+            isLoading={isProcessing}
             ordersLength={orders.length}
           />
         )
@@ -1129,18 +1070,10 @@ export default function IntegratedPage() {
           />
         )
 
-      case 'sched-leave-adjustment':
+      case 'sched-employee-status':
         return (
-          <LeaveAdjustment
+          <EmployeeStatusManagement 
             positionGroups={positionGroups}
-            leaveList={leaveList}
-            setLeaveList={setLeaveList}
-            adjustmentSuggestions={adjustmentSuggestions}
-            teamWorkloads={teamWorkloads}
-            handleLeaveRequest={handleLeaveRequest}
-            generateAdjustmentSolutions={generateAdjustmentSolutions}
-            isProcessing={isProcessing}
-            formatDate={formatDate}
             setActiveTab={setActiveTab}
           />
         )
@@ -1206,38 +1139,30 @@ export default function IntegratedPage() {
                   <table className="w-full border-collapse border border-gray-300">
                     <thead>
                       <tr className="bg-gray-50">
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">产能</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">节拍</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">能耗</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">定员</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">人效</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">能耗成本</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">人效成本</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">总成本</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">产能</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">节拍</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">能耗</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">定员</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">人效</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">能耗成本</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">人效成本</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">总成本</th>
                       </tr>
                     </thead>
                     <tbody>
                       {capacityData.capacity_data.map((row, index) => (
-                        <tr key={index} className={`${[170, 180, 190].includes(row.产能) ? 'bg-yellow-50' : 'hover:bg-gray-50'}`}>
-                          <td className="border border-gray-300 px-4 py-2 font-medium">
-                            {row.产能}
-                            {[170, 180, 190].includes(row.产能) && (
-                              <Badge variant="outline" className="ml-2 text-xs">常用</Badge>
-                            )}
-                          </td>
+                        <tr key={index} className={`
+                          ${[170, 180, 190].includes(row.产能) ? 'bg-yellow-50 border-yellow-200' : 
+                            index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
+                        `}>
+                          <td className="border border-gray-300 px-4 py-2">{row.产能}</td>
                           <td className="border border-gray-300 px-4 py-2">{row.节拍}</td>
                           <td className="border border-gray-300 px-4 py-2">{row.能耗}</td>
                           <td className="border border-gray-300 px-4 py-2">{row.定员}</td>
                           <td className="border border-gray-300 px-4 py-2">{row.人效}</td>
-                          <td className="border border-gray-300 px-4 py-2 text-green-600">
-                            ¥{row.能耗成本.toLocaleString()}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-2 text-orange-600">
-                            ¥{row.人效成本.toLocaleString()}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-2 font-bold text-purple-600">
-                            ¥{row.总成本.toLocaleString()}
-                          </td>
+                          <td className="border border-gray-300 px-4 py-2">{row.能耗成本.toFixed(2)}</td>
+                          <td className="border border-gray-300 px-4 py-2">{row.人效成本.toFixed(2)}</td>
+                          <td className="border border-gray-300 px-4 py-2 font-semibold">{row.总成本.toFixed(2)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1269,6 +1194,167 @@ export default function IntegratedPage() {
     )
   }
 
+  // 转产时间数据modal渲染
+  const renderChangeoverModal = () => {
+    if (!showChangeoverModal) return null
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] m-4">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">转产时间配置表</h2>
+              <p className="text-sm text-gray-600">查看各箱型工作中心的转产时间数据</p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowChangeoverModal(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+            {loadingChangeoverData ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto"></div>
+                <p className="mt-2 text-gray-600">加载转产时间数据中...</p>
+              </div>
+            ) : changeoverData ? (
+              <div className="space-y-6">
+                {/* 转产时间说明 */}
+                <div className="bg-orange-50 rounded-lg p-4">
+                  <h3 className="font-semibold text-orange-900 mb-3 flex items-center">
+                    <Clock className="h-5 w-5 mr-2" />
+                    转产时间说明
+                  </h3>
+                  <div className="space-y-2 text-sm text-orange-800">
+                    <div className="flex items-start">
+                      <span className="w-4 h-4 bg-blue-500 rounded-full mr-2 mt-0.5 flex-shrink-0"></span>
+                      <span><strong>用途：</strong>{changeoverData.description.purpose}</span>
+                    </div>
+                    <div className="flex items-start">
+                      <span className="w-4 h-4 bg-green-500 rounded-full mr-2 mt-0.5 flex-shrink-0"></span>
+                      <span><strong>包含：</strong>{changeoverData.description.includes}</span>
+                    </div>
+                    <div className="flex items-start">
+                      <span className="w-4 h-4 bg-yellow-500 rounded-full mr-2 mt-0.5 flex-shrink-0"></span>
+                      <span><strong>注意：</strong>{changeoverData.description.note}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 统计概览 */}
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  <div className="bg-blue-50 rounded-lg p-4 text-center">
+                    <div className="text-2xl font-bold text-blue-600">{changeoverData.statistics.total_box_types}</div>
+                    <div className="text-sm text-blue-600">箱型数量</div>
+                  </div>
+                  <div className="bg-green-50 rounded-lg p-4 text-center">
+                    <div className="text-2xl font-bold text-green-600">{changeoverData.statistics.total_work_centers}</div>
+                    <div className="text-sm text-green-600">工作中心</div>
+                  </div>
+                  <div className="bg-purple-50 rounded-lg p-4 text-center">
+                    <div className="text-2xl font-bold text-purple-600">{changeoverData.statistics.total_records}</div>
+                    <div className="text-sm text-purple-600">转产记录</div>
+                  </div>
+                  <div className="bg-yellow-50 rounded-lg p-4 text-center">
+                    <div className="text-2xl font-bold text-yellow-600">{changeoverData.statistics.min_changeover_time}</div>
+                    <div className="text-sm text-yellow-600">最短时间({changeoverData.statistics.unit})</div>
+                  </div>
+                  <div className="bg-red-50 rounded-lg p-4 text-center">
+                    <div className="text-2xl font-bold text-red-600">{changeoverData.statistics.max_changeover_time}</div>
+                    <div className="text-sm text-red-600">最长时间({changeoverData.statistics.unit})</div>
+                  </div>
+                </div>
+
+                {/* 转产时间数据表格 */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {Object.entries(changeoverData.changeover_data).map(([boxType, workCenters]) => (
+                    <div key={boxType} className="space-y-4">
+                      <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                        <Package className="h-5 w-5 mr-2 text-blue-600" />
+                        {boxType}
+                      </h3>
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse border border-gray-300">
+                          <thead>
+                            <tr className="bg-gray-50">
+                              <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">工作中心</th>
+                              <th className="border border-gray-300 px-4 py-2 text-center font-medium text-gray-700">转产时间({changeoverData.statistics.unit})</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {Object.entries(workCenters).map(([workCenter, time], index) => (
+                              <tr key={workCenter} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                                <td className="border border-gray-300 px-4 py-2">{workCenter}</td>
+                                <td className="border border-gray-300 px-4 py-2 text-center font-semibold">
+                                  <span className={`px-2 py-1 rounded text-sm ${
+                                    time <= 30 ? 'bg-green-100 text-green-800' :
+                                    time <= 60 ? 'bg-yellow-100 text-yellow-800' :
+                                    time <= 180 ? 'bg-orange-100 text-orange-800' :
+                                    'bg-red-100 text-red-800'
+                                  }`}>
+                                    {time}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="text-sm text-gray-600 bg-gray-50 rounded-lg p-4">
+                  <p className="font-medium mb-2">说明：</p>
+                  <ul className="space-y-1">
+                    <li>• <span className="inline-block w-3 h-3 bg-green-100 rounded mr-2"></span>绿色：≤30分钟（快速转产）</li>
+                    <li>• <span className="inline-block w-3 h-3 bg-yellow-100 rounded mr-2"></span>黄色：31-60分钟（中等转产）</li>
+                    <li>• <span className="inline-block w-3 h-3 bg-orange-100 rounded mr-2"></span>橙色：61-180分钟（较长转产）</li>
+                    <li>• <span className="inline-block w-3 h-3 bg-red-100 rounded mr-2"></span>红色：&gt;180分钟（长时转产）</li>
+                    <li>• 排产时需考虑工作中心的转产时间对总体生产计划的影响</li>
+                  </ul>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">获取转产时间数据失败</p>
+                <Button onClick={fetchChangeoverData} className="mt-4">
+                  重新加载
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // 工具函数：读取Excel文件
+  const readExcelFile = async (file: File): Promise<unknown[]> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer)
+          const workbook = XLSX.read(data, { type: 'array' })
+          const sheetName = workbook.SheetNames[0]
+          const worksheet = workbook.Sheets[sheetName]
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
+          resolve(jsonData)
+        } catch (error) {
+          reject(error)
+        }
+      }
+      reader.onerror = () => reject(new Error('文件读取失败'))
+      reader.readAsArrayBuffer(file)
+    })
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
       <div className="flex h-screen">
@@ -1285,6 +1371,9 @@ export default function IntegratedPage() {
 
       {/* 产能数据modal */}
       {renderCapacityModal()}
+
+      {/* 转产时间数据modal */}
+      {renderChangeoverModal()}
     </div>
   )
 } 

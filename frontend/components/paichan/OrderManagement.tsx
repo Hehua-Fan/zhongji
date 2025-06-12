@@ -404,13 +404,18 @@ export default function OrderManagement({
 
               <div className="space-y-2">
                 <Label htmlFor="product_code">产品编码 *</Label>
-                <Input
-                  id="product_code"
-                  value={formData.product_code}
-                  onChange={(e) => updateFormData('product_code', e.target.value)}
-                  placeholder="输入产品编码"
-                  className={formErrors.product_code ? 'border-red-500' : ''}
-                />
+                <Select 
+                  value={formData.product_code} 
+                  onValueChange={(value) => updateFormData('product_code', value)}
+                >
+                  <SelectTrigger className={formErrors.product_code ? 'border-red-500' : ''}>
+                    <SelectValue placeholder="选择产品编码" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="C1B010000036">C1B010000036</SelectItem>
+                    <SelectItem value="C1B010000037">C1B010000037</SelectItem>
+                  </SelectContent>
+                </Select>
                 {formErrors.product_code && (
                   <p className="text-red-500 text-sm mt-1">{formErrors.product_code}</p>
                 )}

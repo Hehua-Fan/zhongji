@@ -17,7 +17,8 @@ import {
   TrendingUp,
   BarChart3,
   ShoppingCart,
-  Package
+  Package,
+  Clock
 } from 'lucide-react'
 
 interface ParameterSettingsProps {
@@ -29,6 +30,7 @@ interface ParameterSettingsProps {
   setDelayPenalty: (value: number) => void
   executeMultiPlanProduction: () => void
   openCapacityModal: () => void
+  openChangeoverModal: () => void
   isLoading: boolean
   ordersLength: number
 }
@@ -40,6 +42,7 @@ export default function ParameterSettings({
   setCapacityVariation,
   executeMultiPlanProduction,
   openCapacityModal,
+  openChangeoverModal,
   isLoading,
   ordersLength
 }: ParameterSettingsProps) {
@@ -107,15 +110,26 @@ export default function ParameterSettings({
                 成本计算基于产能数据表，推荐使用 170、180、190 等标准配置
               </p>
             </div>
-            <Button
-              onClick={openCapacityModal}
-              variant="outline"
-              size="sm"
-              className="border-amber-300 text-amber-700 hover:bg-amber-100 ml-4 cursor-pointer"
-            >
-              <Eye className="h-4 w-4 mr-2" />
-              查看配置表
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={openCapacityModal}
+                variant="outline"
+                size="sm"
+                className="border-amber-300 text-amber-700 hover:bg-amber-100 cursor-pointer"
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                查看配置表
+              </Button>
+              <Button
+                onClick={openChangeoverModal}
+                variant="outline"
+                size="sm"
+                className="border-orange-300 text-orange-700 hover:bg-orange-100 cursor-pointer"
+              >
+                <Clock className="h-4 w-4 mr-2" />
+                转产时间
+              </Button>
+            </div>
           </div>
         </AlertDescription>
       </Alert>

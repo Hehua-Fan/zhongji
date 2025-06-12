@@ -301,7 +301,7 @@ export default function DataUpload({
                   <FileText className="h-6 w-6" />
                 </div>
                 <h3 className="font-semibold text-gray-900 mb-2">SKU工艺路线</h3>
-                <p className="text-sm text-gray-600 mb-4">产品代码、工序信息、标准工时</p>
+                <p className="text-sm text-gray-600 mb-4">产品代码、工序信息、标准工时、箱型映射</p>
                 
                 <Input
                   type="file"
