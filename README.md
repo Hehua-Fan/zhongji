@@ -1,240 +1,397 @@
-# 智能排班排产系统
+# 智能排班排产系统: 下一代工业智能化解决方案
 
-一个基于Python FastAPI后端和Next.js前端的智能排班排产系统，支持按岗位排班和生产排程功能。
+智能排班排产系统是一个现代化的生产管理平台，集成了智能排班、生产排程和数据分析功能。
 
-## 🚀 系统概述
+## 特性
 
-### 主要功能
-- **按岗位排班**: 根据技能矩阵、岗位需求和人员配置进行智能排班
-- **生产排程**: 支持多种排产规则的生产计划调度
-- **效果评价**: 人岗匹配度和工时利用率分析
-- **请假调整**: 智能生成人员调整建议
-- **数据可视化**: 直观的排班结果展示和统计分析
+- 🏭 **智能排班**: 基于技能矩阵和岗位需求的自动排班算法
+- 📊 **生产排程**: 多算法支持的订单排产优化系统
+- 🧠 **智能分析**: AI驱动的效果评价和优化建议
+- 📱 **响应式设计**: 跨设备完美适配的用户界面
+- ⚡ **实时处理**: 高性能的数据处理和实时反馈
+- 🎨 **数据可视化**: 直观的图表和报告展示
 
-### 技术栈
-- **后端**: Python 3.x, FastAPI, Pandas, Pydantic
-- **前端**: Next.js 14, React, TypeScript, Tailwind CSS
-- **数据处理**: Excel文件读取，JSON API交互
+## 增强的React组件支持
 
-## 📦 安装和启动
+智能排班排产系统采用现代化的React技术栈，支持全面的组件库和开发模式：
+
+### 📦 **支持的React模式**
+
+- **基础React组件**: 函数组件、类组件、箭头函数组件
+- **TypeScript React**: FC、FunctionComponent、ReactNode、JSX.Element
+- **React Hooks**: useState、useEffect、useContext、useReducer、自定义Hooks
+- **现代React**: 带Hooks的函数式组件
+- **Next.js组件**: 页面组件、API路由、服务端组件
+
+### 🎨 **UI库支持**
+
+- **Shadcn/ui**: 现代化的React组件库
+- **Radix UI**: @radix-ui/react-* 无障碍组件
+- **Tailwind CSS**: 实用优先的CSS框架
+- **Lucide React**: 美观的SVG图标库
+- **React Hot Toast**: 优雅的通知组件
+- **React Select**: 高级选择器组件
+
+### 🔧 **开发工具**
+
+- **表单处理**: React Hook Form集成
+- **状态管理**: React内置状态管理
+- **数据处理**: Excel文件读取和处理
+- **路由**: Next.js内置路由系统
+- **动画**: Tailwind CSS动画
+- **图标**: Lucide React图标库
+
+### 📊 **数据可视化**
+
+- **表格**: 自定义高性能表格组件
+- **日历**: 生产排程日历视图
+- **图表**: 自定义图表组件
+- **仪表板**: 多维度数据展示
+
+### 🚀 **组件架构**
+
+系统采用模块化组件架构：
+
+```tsx
+// 排产组件
+<OrderManagement />      // 订单管理
+<ParameterSettings />    // 参数设置
+<PlanComparison />       // 方案对比
+<ProductionAnalysis />   // 生产分析
+```
+
+```tsx
+// 排班组件
+<ProductionSchedule />   // 生产排程
+<DataUpload />          // 数据上传
+<ScheduleResults />     // 排班结果
+<PerformanceAnalysis /> // 性能分析
+<LeaveAdjustment />     // 请假调整
+```
+
+### 🎯 **自动检测特性**
+
+- **智能组件识别**: 自动识别React组件类型
+- **组件名称提取**: 智能提取组件名称用于组织
+- **TypeScript支持**: 完整的TypeScript React组件支持
+- **库检测**: 识别流行的React库和框架
+- **实时渲染**: 组件在流式传输期间出现在artifacts面板
+
+### 💡 **使用示例**
+
+系统支持创建各种复杂的React组件：
+- "创建带有验证的排班表单组件"
+- "构建使用Tailwind CSS的生产分析仪表板"
+- "设计TypeScript React排产优化组件"
+- "制作响应式的数据上传界面"
+
+## 开始使用
 
 ### 前置条件
-- Python 3.8+
-- Node.js 18+
-- Conda 环境管理器
 
-### 1. 后端服务启动
+1. Node.js 18+ 和 npm
+2. Python 3.8+
+3. Conda 环境管理器
 
+### 环境配置
+
+1. **创建Conda环境**:
 ```bash
-# 进入后端目录
-cd backend
-
-# 激活conda环境
+conda create -n zhongji python=3.11
 conda activate zhongji
+```
 
-# 安装依赖（如果尚未安装）
+2. **安装后端依赖**:
+```bash
+cd backend
 pip install -r requirements.txt
+```
 
-# 启动后端服务
+3. **安装前端依赖**:
+```bash
+cd frontend
+npm install
+```
+
+### 一键启动
+
+使用提供的Makefile脚本一键启动前后端服务：
+```bash
+make dev
+```
+
+### 手动启动
+
+**后端:**
+```bash
+cd backend
+conda activate zhongji
 python start.py
 ```
 
-后端服务将运行在: http://localhost:8000
-- API文档: http://localhost:8000/docs
-- 健康检查: http://localhost:8000/health
-
-### 2. 前端服务启动
-
+**前端:**
 ```bash
-# 进入前端目录
 cd frontend
-
-# 安装依赖（如果尚未安装）
-npm install
-
-# 启动前端服务
 npm run dev
 ```
 
-前端服务将运行在: http://localhost:3000
+## 功能模块
 
-## 🎯 使用指南
+### 🏭 排班管理系统
 
-### 1. 数据准备
+#### 核心功能
+- **数据上传**: 支持Excel文件上传（基础箱型库、岗位图谱、技能矩阵）
+- **智能排班**: 基于技能匹配的自动排班算法
+- **效果评价**: 人岗匹配度和工时利用率分析
+- **请假调整**: 智能生成人员调整建议
+- **多视图展示**: 支持日视图、周视图切换
 
-系统需要以下三个Excel文件：
+#### 排班算法
+```
+技能匹配优先: 优先分配技能等级满足要求的员工
+班组均衡: 保持班组内人员分配相对均衡
+负荷均衡: 避免个别岗位过度集中或不足
+```
 
-#### a. 基础箱型库.xlsx
-包含产品和岗位需求信息：
-- 产成品编码 (列A)
-- 岗位编码 (列E) 
-- 需求人数 (列Q)
+### 📊 排产管理系统
 
-#### b. 岗位图谱.xlsx
-包含岗位技能要求：
-- 工作中心 (列C)
-- 岗位编码 (列F)
-- 岗位技能等级 (列M)
+#### 核心功能
+- **订单管理**: 客户订单录入和管理
+- **参数设置**: 生产参数配置和优化
+- **方案对比**: 多算法排产方案比较
+- **生产分析**: 详细的生产计划分析
 
-#### c. 技能矩阵.xlsx
-包含员工技能信息：
-- 姓名, 工号, 班组
-- 各岗位技能等级 (数值型)
-
-### 2. 排班操作流程
-
-#### 单日排班
-1. 上传三个Excel数据文件
-2. 输入产品SKU代码
-3. 点击"今日排班"按钮
-4. 查看排班结果和效果评价
-
-#### 一周排班
-1. 准备好数据文件
-2. 点击"一周排班"按钮
-3. 系统自动生成本周7天的排班计划
-4. 可切换到周视图查看整体安排
-
-### 3. 功能模块说明
-
-#### 数据上传模块
-- 支持.xlsx格式文件上传
-- 实时验证文件格式和数据完整性
-- 显示上传状态和统计信息
-
-#### 排班视图模块
-- 日视图/周视图切换
-- 多维度筛选 (岗位、工作中心、班组、状态)
-- 排班结果表格展示
-- Excel文件导出功能
-
-#### 效果评价模块
-- **人岗匹配度分析**: 计算员工技能与岗位要求的匹配程度
-- **工时利用率分析**: 评估人员配置的效率
-- **培养计划**: 自动生成技能提升建议
-- **优化方案**: 提供改进建议
-
-#### 请假调整模块
-- 请假信息录入
-- 班组负荷分析
-- 智能调整建议生成
-- 效率影响评估
-
-## 🔧 API接口
-
-### 排班相关
-- `POST /scheduling/day` - 单日排班
-- `POST /scheduling/week` - 一周排班
-- `POST /scheduling/performance` - 性能指标计算
-- `POST /scheduling/team-workloads` - 班组负荷计算
-
-### 排产相关
-- `POST /production/schedule` - 生产排程
-- `POST /production/optimize` - 排程优化
-- `POST /production/gantt` - 甘特图数据
-- `POST /production/summary` - 排程摘要
-
-### 通用工具
-- `GET /health` - 健康检查
-- `GET /algorithms/scheduling-rules` - 排班规则
-- `GET /algorithms/production-rules` - 排产规则
-- `POST /data/validate` - 数据验证
-
-## 📊 算法说明
-
-### 排班算法
-1. **技能匹配**: 优先分配技能等级满足要求的员工
-2. **班组均衡**: 保持班组内人员分配相对均衡  
-3. **负荷均衡**: 避免个别岗位过度集中或不足
-
-### 排产算法
+#### 排产算法
 - **FIFO**: 先进先出，按订单接收时间排序
 - **SPT**: 最短时间优先，优先安排加工时间短的订单
 - **EDD**: 最早交期优先，优先安排交期最近的订单
 - **CR**: 关键比率优先，基于剩余时间和加工时间比率
 
-### 评价指标
+### 📈 数据分析与优化
 
-#### 人岗匹配度
+#### 评价指标
+- **人岗匹配度**: `满足要求总人数 / 总人数 × 100%`
+- **工时利用率**: `(实际配置工时 / 需求工时) × 100%`
+- **完成率**: 订单按时完成的百分比
+- **产能利用率**: 实际产出与设计产能的比率
+
+## API文档
+
+### 排班相关API
+- `POST /scheduling/day` - 单日排班
+- `POST /scheduling/week` - 一周排班
+- `POST /scheduling/performance` - 性能指标计算
+- `POST /scheduling/team-workloads` - 班组负荷计算
+
+### 排产相关API
+- `POST /production/schedule` - 生产排程
+- `POST /production/optimize` - 排程优化
+- `POST /production/gantt` - 甘特图数据
+- `POST /production/summary` - 排程摘要
+
+### 通用API
+- `GET /health` - 健康检查
+- `GET /algorithms/scheduling-rules` - 排班规则
+- `GET /algorithms/production-rules` - 排产规则
+
+## Docker部署
+
+### 构建和启动
+```bash
+# 构建镜像
+make docker-build
+
+# 启动服务
+make docker-up
+
+# 查看日志
+make docker-logs
 ```
-总体匹配度 = 满足要求总人数 / 总人数 × 100%
-岗位匹配度 = 满足要求人数 / 岗位总人数 × 100%
+
+### 生产环境
+```bash
+# 一键生产部署
+make prod
 ```
 
-#### 工时利用率
-```
-总体利用率 = (实际配置工时 / 需求工时) × 100%
-实际配置工时 = 已排人数 × 标准工时
-需求工时 = 需求人数 × 标准工时
-```
+### 服务地址
 
-## 🧪 测试功能
+- 前端界面: http://localhost:3000
+- 后端API: http://localhost:8000
+- API文档: http://localhost:8000/docs
 
-访问 http://localhost:3000/test 可以进行API连通性测试：
-- 健康检查API测试
-- 排班API功能测试
-- 实时查看请求和响应数据
+## 测试功能
 
-## 🔍 故障排除
+访问测试页面进行系统验证：
+- **API连通性测试**: http://localhost:3000/test
+- **健康检查**: http://localhost:8000/health
+- **交互式API文档**: http://localhost:8000/docs
+
+## 高级特性
+
+### 🎯 智能优化引擎
+
+系统集成了多种优化算法：
+- **遗传算法**: 用于复杂排班优化
+- **贪心算法**: 快速排产决策
+- **动态规划**: 资源分配优化
+- **机器学习**: 基于历史数据的预测优化
+
+### 📊 可视化分析
+
+- **甘特图**: 生产进度可视化
+- **热力图**: 工作负荷分布
+- **仪表板**: 实时关键指标监控
+- **趋势分析**: 历史数据趋势图
+
+### 🔧 系统集成
+
+- **Excel集成**: 无缝导入导出Excel文件
+- **REST API**: 标准化API接口
+- **实时更新**: WebSocket实时数据更新
+- **多格式导出**: PDF、Excel、CSV格式支持
+
+## 技术架构
+
+### 后端技术栈
+- **FastAPI**: 现代化的Python Web框架
+- **Pandas**: 强大的数据处理库
+- **Pydantic**: 数据验证和设置管理
+- **Uvicorn**: 高性能ASGI服务器
+
+### 前端技术栈
+- **Next.js 15**: React全栈框架
+- **TypeScript**: 类型安全的JavaScript
+- **Tailwind CSS**: 实用优先的CSS框架
+- **Shadcn/ui**: 现代化组件库
+
+### 开发工具
+- **ESLint**: 代码质量检查
+- **Prettier**: 代码格式化
+- **Conda**: Python环境管理
+- **Docker**: 容器化部署
+
+## 故障排除
 
 ### 常见问题
 
-1. **后端服务启动失败**
-   - 检查Python环境和依赖包
-   - 确认端口8000未被占用
-   - 查看控制台错误信息
-
-2. **前端页面无法访问**
-   - 检查Node.js版本 (>=18)
-   - 重新安装依赖: `npm install`
-   - 检查端口3000是否可用
-
-3. **API调用失败**
-   - 确认CORS配置正确
-   - 检查网络连接
-   - 验证请求数据格式
-
-4. **文件上传问题**
-   - 确保Excel文件格式为.xlsx
-   - 检查文件数据结构是否正确
-   - 查看浏览器控制台错误信息
-
-## 📈 系统监控
-
-### 服务状态检查
+#### 🔧 环境问题
 ```bash
-# 后端健康检查
-curl http://localhost:8000/health
+# 检查环境
+make check
 
-# 前端页面检查  
-curl -I http://localhost:3000
+# 强制关闭端口
+make kill-ports
 
-# 排班页面检查
-curl -I http://localhost:3000/paiban
+# 重新安装依赖
+make install
 ```
 
-### 性能监控
-- 系统会自动计算并显示排班效率指标
-- 支持导出排班结果进行离线分析
-- 提供详细的错误日志和调试信息
+#### 🐛 服务问题
+```bash
+# 清理缓存
+make clean
 
-## 🤝 开发者信息
+# 重启服务
+make restart
 
-- **系统架构**: 前后端分离，RESTful API设计
-- **数据流**: Excel → 后端处理 → API响应 → 前端展示
-- **扩展性**: 模块化设计，支持新增算法和功能
+# 查看日志
+make logs
+```
 
-## 📞 支持联系
+#### 📦 Docker问题
+```bash
+# 清理Docker资源
+make docker-clean
 
-如有问题或建议，请通过以下方式联系：
-- 技术支持: 查看系统日志和错误信息
-- 功能建议: 提交功能需求说明
-- 使用培训: 参考本文档和测试页面示例
+# 重新构建
+make docker-build
+
+# 重启容器
+make docker-restart
+```
+
+## 开发指南
+
+### 项目结构
+```
+├── frontend/                 # Next.js前端应用
+│   ├── app/                 # 页面和布局
+│   │   ├── paiban/         # 排班组件
+│   │   ├── paichan/        # 排产组件
+│   │   └── ui/             # 基础UI组件
+│   └── lib/                # 工具函数
+├── backend/                 # FastAPI后端应用
+│   ├── main.py             # 主应用入口
+│   ├── paiban.py           # 排班逻辑
+│   ├── paichan.py          # 排产逻辑
+│   └── models.py           # 数据模型
+└── Makefile                # 构建和部署脚本
+```
+
+### 组件开发
+
+创建新的React组件：
+```tsx
+'use client'
+
+import React from 'react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+
+interface MyComponentProps {
+  title: string
+  onAction: () => void
+}
+
+export default function MyComponent({ title, onAction }: MyComponentProps) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Button onClick={onAction}>执行操作</Button>
+      </CardContent>
+    </Card>
+  )
+}
+```
+
+### API开发
+
+添加新的API端点：
+```python
+from fastapi import APIRouter
+from pydantic import BaseModel
+
+router = APIRouter()
+
+class RequestModel(BaseModel):
+    name: str
+    value: int
+
+@router.post("/api/endpoint")
+async def new_endpoint(data: RequestModel):
+    return {"message": f"处理 {data.name} 成功"}
+```
+
+## 贡献指南
+
+1. Fork项目仓库
+2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 打开Pull Request
+
+## 许可证
+
+本项目采用MIT许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+
+## 支持
+
+如有问题或建议，请提交Issue或联系开发团队。
 
 ---
 
-✅ **系统已完成部署并正常运行**
-- 后端服务: http://localhost:8000 ✅
-- 前端界面: http://localhost:3000 ✅  
-- 排班功能: http://localhost:3000/paiban ✅
-- API测试: http://localhost:3000/test ✅ 
+**智能排班排产系统** - 让生产管理更智能、更高效！
