@@ -11,7 +11,7 @@ from models import (
     MultiPlanProductionResponse, MultiPlanProductionRequest, ProductionToSchedulingRequest,
     CustomerOrder, CapacityPlan, ProductionScheduleResult
 )
-from paichan import ProductionSchedulingEngine
+from tools import ProductionSchedulingEngine
 
 # 创建路由器
 router = APIRouter(prefix="/production", tags=["排产管理"])

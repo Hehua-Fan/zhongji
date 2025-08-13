@@ -477,7 +477,7 @@ class ProductionSchedulingEngine:
         request: ProductionToSchedulingRequest
     ) -> ProductionToSchedulingResponse:
         """集成排产到排班"""
-        from paiban import SchedulingEngine
+        from .paiban import SchedulingEngine
         
         scheduling_engine = SchedulingEngine()
         daily_schedules = {}

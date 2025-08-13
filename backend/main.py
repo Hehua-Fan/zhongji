@@ -8,8 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 
 from models import EmployeeStatusRecord
-from paiban import SchedulingEngine
-from paichan import ProductionSchedulingEngine
+from tools import SchedulingEngine, ProductionSchedulingEngine
 
 # 导入路由模块
 from router import base, scheduling, production, employee, utils

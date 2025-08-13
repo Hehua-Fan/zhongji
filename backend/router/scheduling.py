@@ -12,7 +12,7 @@ from models import (
     WeeklySchedulingResponse, PositionGroup, LeaveInfo, 
     AdjustmentSuggestion, TeamWorkload
 )
-from paiban import SchedulingEngine
+from tools import SchedulingEngine
 
 # 创建路由器
 router = APIRouter(prefix="/scheduling", tags=["排班管理"])

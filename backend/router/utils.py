@@ -6,7 +6,7 @@
 from fastapi import APIRouter, HTTPException
 from typing import List, Any
 
-from paiban import SchedulingEngine
+from tools import SchedulingEngine
 
 # 创建路由器
 router = APIRouter(prefix="/algorithms", tags=["工具算法"])
